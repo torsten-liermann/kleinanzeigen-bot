@@ -47,6 +47,14 @@ _SHIPPING_SIZE_RADIO_XPATH:Final[str] = (
 )
 _SHIPPING_BACK_XPATH:Final[str] = f'{_OPEN_SHIPPING_DIALOG_XPATH}//button[contains(., "Zurück")]'
 
+# The control that opens the category flow. Prefer the stable container id over the link label:
+# the label has changed with the form redesign ("Kategorie ändern" -> "Wähle deine Kategorie"),
+# while `#ad-category-suggestions` stayed put. The label variants remain as a fallback.
+_CATEGORY_TRIGGER_XPATH:Final[str] = (
+    "//*[@id='ad-category-suggestions']//a | //*[@id='ad-category-suggestions']//button"
+    " | //a[contains(., 'Kategorie')] | //button[contains(., 'Kategorie')]"
+)
+
 
 async def set_category(web:WebScrapingMixin, *, root_url:str, category:str | None, ad_file:str) -> None:
     # click on something to trigger automatic category detection
@@ -59,7 +67,9 @@ async def set_category(web:WebScrapingMixin, *, root_url:str, category:str | Non
 
     if category:
         await web.web_sleep()  # workaround for https://github.com/Second-Hand-Friends/kleinanzeigen-bot/issues/39
-        await web.web_click(By.XPATH, "//a[contains(., 'Kategorie')] | //button[contains(., 'Kategorie')]")
+        # The category block is rendered client-side after the form shell, so the baseline DOM
+        # timeout can elapse before the trigger exists. Wait with the page-load budget instead.
+        await web.web_click(By.XPATH, _CATEGORY_TRIGGER_XPATH, timeout = web.timeout("page_load"))
         await web.web_find(By.XPATH, "//button[contains(., 'Weiter')]")
 
         category_url = f"{root_url}/p-kategorie-aendern.html#?path={category}"

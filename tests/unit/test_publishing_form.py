@@ -558,6 +558,30 @@ class TestCategoryProbeBehavior:
         mock_probe.assert_any_await(By.ID, "ad-category-path")
 
     @pytest.mark.asyncio
+    async def test_set_category_trigger_uses_container_id_and_page_load_budget(self, test_bot:KleinanzeigenBot) -> None:
+        """The category trigger is located via the stable container id and awaited with the page-load budget.
+
+        The link label changed with the form redesign ("Kategorie ändern" -> "Wähle deine Kategorie") and the
+        block is rendered client-side, so a label-only match on the baseline timeout is not reliable.
+        """
+        with (
+            patch.object(test_bot, "web_probe", new_callable = AsyncMock, return_value = None),
+            patch.object(test_bot, "web_click", new_callable = AsyncMock) as mock_click,
+            patch.object(test_bot, "web_find", new_callable = AsyncMock),
+            patch.object(test_bot, "web_open", new_callable = AsyncMock),
+            patch.object(test_bot, "web_sleep", new_callable = AsyncMock),
+        ):
+            await set_category(test_bot, root_url = test_bot.root_url, category = "185/249", ad_file = "data/my_ads/ad.yaml")
+
+        trigger_calls = [
+            call for call in mock_click.await_args_list
+            if call.args and call.args[0] is By.XPATH and "ad-category-suggestions" in call.args[1]
+        ]
+        assert trigger_calls, "category trigger should be matched via the stable container id"
+        assert "Wähle deine Kategorie" not in trigger_calls[0].args[1], "trigger must not depend on the current label text"
+        assert trigger_calls[0].kwargs.get("timeout") == test_bot.timeout("page_load")
+
+    @pytest.mark.asyncio
     async def test_set_category_without_explicit_category_requires_probe_match(self, test_bot:KleinanzeigenBot) -> None:
         """When no category is configured, missing marker should fail fast."""
         with (
