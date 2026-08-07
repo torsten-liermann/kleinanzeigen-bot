@@ -23,11 +23,15 @@ from kleinanzeigen_bot.model.ad_model import Ad, AdUpdateStrategy
 from kleinanzeigen_bot.model.config_model import (
     AutoPriceReductionConfig,
     DiagnosticsConfig,
+    PublishingConfig,
 )
 from kleinanzeigen_bot.published_ads import PublishedAdsFetchIncompleteError
-from kleinanzeigen_bot.publishing_workflow import SUBMISSION_MAX_RETRIES, PostPublishPersistenceError
+from kleinanzeigen_bot.publishing_workflow import PostPublishPersistenceError
 from kleinanzeigen_bot.utils.exceptions import CategoryResolutionError, PublishSubmissionUncertainError
 from tests.conftest import build_published_ads, build_update_ad
+
+# Default number of submission attempts; single source of truth is the config model.
+SUBMISSION_MAX_RETRIES = PublishingConfig().submission_max_attempts
 
 
 @pytest.fixture
@@ -42,6 +46,34 @@ def mock_page() -> MagicMock:
 
 
 class TestKleinanzeigenBotUpdateAdsResilience:
+    @pytest.mark.asyncio
+    async def test_submission_max_attempts_one_disables_retries(
+        self,
+        test_bot:KleinanzeigenBot,
+        base_ad_config:dict[str, Any],
+    ) -> None:
+        """With publishing.submission_max_attempts = 1 a failing ad is attempted exactly once."""
+        test_bot.config.publishing.submission_max_attempts = 1
+        ad_one = build_update_ad(base_ad_config, 101, "Timeout Ad")
+
+        async def publish_side_effect(*_args:Any, **_kwargs:Any) -> None:
+            raise TimeoutError("transient timeout")
+
+        with (
+            patch(
+                "kleinanzeigen_bot.published_ads.fetch_published_ads",
+                new_callable = AsyncMock,
+                return_value = build_published_ads((101, "active")),
+            ),
+            patch("kleinanzeigen_bot.publishing_workflow.publish_ad", new_callable = AsyncMock, side_effect = publish_side_effect) as publish_mock,
+            patch.object(test_bot, "web_sleep", new_callable = AsyncMock) as sleep_mock,
+            patch.object(test_bot, "web_await", new_callable = AsyncMock, return_value = True),
+        ):
+            await test_bot.update_ads([ad_one])
+
+        assert publish_mock.await_count == 1, "no retry may happen when submission_max_attempts is 1"
+        assert sleep_mock.await_count == 0, "no retry pause may happen when submission_max_attempts is 1"
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("first_failure", "first_title"),

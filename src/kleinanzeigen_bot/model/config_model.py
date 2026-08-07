@@ -270,6 +270,16 @@ class PublishingConfig(ContextualModel):
         default = True,
         description = "match ads by title when deleting old ads before publish or deleting ID-less ads; ambiguous title matches are skipped",
     )
+    submission_max_attempts:int = Field(
+        default = 3,
+        ge = 1,
+        description = (
+            "how many times a single ad submission is attempted before the ad is skipped. "
+            "Set to 1 to disable retries — useful when repeated form submissions are undesirable, "
+            "e.g. to avoid rate limiting"
+        ),
+        examples = [1, 3],
+    )
     local_path_renaming:LocalPathRenamingConfig = Field(
         default_factory = LocalPathRenamingConfig,
         description = (

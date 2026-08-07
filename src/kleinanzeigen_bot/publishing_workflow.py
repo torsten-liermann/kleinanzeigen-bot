@@ -16,7 +16,7 @@ captcha mechanics (:mod:`captcha_flow`), submit/confirm/ad-id recovery
 import asyncio
 import sys
 from collections.abc import Awaitable, Callable
-from typing import Any, Final
+from typing import Any
 
 from nodriver.core.connection import ProtocolException
 from ruamel.yaml import YAML
@@ -37,7 +37,6 @@ from .utils.web_scraping_mixin import By, Is, WebScrapingMixin
 
 LOG = _loggers.get_logger(__name__)
 
-SUBMISSION_MAX_RETRIES:Final[int] = 3
 
 
 class PostPublishPersistenceError(RuntimeError):
@@ -280,7 +279,7 @@ async def publish_ads(
     """
     count = 0
     failed_count = 0
-    max_retries = SUBMISSION_MAX_RETRIES
+    max_retries = config.publishing.submission_max_attempts
     published_ads_list, strict_published_ads_list, require_strict_fetch = await _fetch_published_ads_for_publish(
         web,
         root_url,
@@ -466,7 +465,7 @@ async def update_ads(
     """
     count = 0
     failed_count = 0
-    max_retries = SUBMISSION_MAX_RETRIES
+    max_retries = config.publishing.submission_max_attempts
 
     published_ads_list = await published_ads.fetch_published_ads(web, root_url)
 

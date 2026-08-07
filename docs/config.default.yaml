@@ -174,6 +174,10 @@ publishing:
   # match ads by title when deleting old ads before publish or deleting ID-less ads; ambiguous title matches are skipped
   delete_old_ads_by_title: true
 
+  # how many times a single ad submission is attempted before the ad is skipped. Set to 1 to disable retries — useful when repeated form submissions are undesirable, e.g. to avoid rate limiting
+  # Examples: 1, 3
+  submission_max_attempts: 3
+
   # local file and folder rename behavior after a successful publish changes the ad ID. When TEMPLATE_MATCH is enabled, the download.folder_name_template and download.ad_file_name_template are used to determine which paths qualify for renaming — only paths whose names match the template structure are updated.
   local_path_renaming:
 

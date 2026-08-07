@@ -273,6 +273,7 @@ Publishing configuration.
 publishing:
   delete_old_ads: "AFTER_PUBLISH"  # one of: AFTER_PUBLISH, BEFORE_PUBLISH, NEVER
   delete_old_ads_by_title: true   # match by title before publish or for ID-less deletes; ambiguous matches are skipped
+  submission_max_attempts: 3      # attempts per ad submission before skipping; 1 disables retries
 ```
 
 ### captcha
